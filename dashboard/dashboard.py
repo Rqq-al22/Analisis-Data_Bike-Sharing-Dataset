@@ -14,8 +14,7 @@ sns.set_theme(style='whitegrid')
 # Load dan siapkan data
 @st.cache_data
 def load_data():
-    # Karena dashboard.py dan dashboard.csv ada di folder yang sama (dashboard/),
-    # kita langsung baca file dashboard.csv
+    # dashboard csv dan py ada di tempat sama
     df = pd.read_csv("dashboard.csv")
     
     if 'dteday' in df.columns:
