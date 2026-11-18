@@ -4,7 +4,6 @@ import streamlit as st
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# Konfigurasi halaman (tanpa ikon/emoji)
 st.set_page_config(
     page_title="Analisis Bike Sharing Dataset",
     layout="wide"
@@ -12,13 +11,12 @@ st.set_page_config(
 
 sns.set_theme(style='whitegrid')
 
-# Load dan siapkan data menggunakan dashboard.csv
+# Load dan siapkan data
 @st.cache_data
 def load_data():
-    base_path = "data" if os.path.exists("data/dashboard.csv") else "."
-    
-    # Menggunakan file dashboard.csv sesuai permintaan
-    df = pd.read_csv(os.path.join(base_path, "dashboard.csv"))
+    # Karena dashboard.py dan dashboard.csv ada di folder yang sama (dashboard/),
+    # kita langsung baca file dashboard.csv
+    df = pd.read_csv("dashboard.csv")
     
     if 'dteday' in df.columns:
         df['dteday'] = pd.to_datetime(df['dteday'])
@@ -27,10 +25,7 @@ def load_data():
 
 df = load_data()
 
-# Untuk menjaga kompatibilitas dengan filter di bawah, 
-# jika dashboard.csv adalah gabungan day_df dan hour_df, pastikan kolomnya ada.
-# Jika Anda memisahkan file, pastikan nama filenya disesuaikan.
-day_df = df.copy()  # Menyesuaikan variabel agar filter tetap berjalan
+day_df = df.copy()
 hour_df = df.copy()
 
 # Bagian Sidebar untuk Filter
