@@ -12,7 +12,7 @@ st.set_page_config(
 
 sns.set_theme(style='whitegrid')
 
-# Load dansiapkan data
+# Load dan siapkan data
 @st.cache_data
 def load_data():
     day_df = pd.read_csv("day.csv")
@@ -193,7 +193,7 @@ with col_b:
         hue='weather',
         palette='Blues_r',
         legend=False,
-        ax3
+        ax=ax3 # <--- Diperbaiki dari 'ax3' menjadi 'ax=ax3'
     )
     ax3.set_xlabel('Rata-rata Sewa per Jam')
     ax3.set_ylabel('')
@@ -206,4 +206,3 @@ st.write(
     "dan pulang kantor (pagi dan sore). Sementara pas akhir pekan, sewa sepedanya lebih santai di siang hari. "
     "Faktor cuaca juga ngaruh banget: orang jelas lebih malasin sewa pas hujan atau badai dibanding waktu cuaca cerah."
 )
-```[cite: 7]
