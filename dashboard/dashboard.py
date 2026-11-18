@@ -12,7 +12,7 @@ st.set_page_config(
 # Load cleaned data
 @st.cache_data
 def load_data():
-    df = pd.read_csv("all_data.csv")
+    df = pd.read_csv("dashboard.csv")
     df["order_date"] = pd.to_datetime(df["order_date"])
     return df
 
