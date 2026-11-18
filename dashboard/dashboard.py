@@ -292,5 +292,5 @@ st.markdown(
 
 st.markdown("---")
 st.caption(
-    "Proyek Analisis Data - Bike Sharing Dataset | Dibuat dengan Streamlit"
+    "Submission Fundamentak Analisis Data - Bike Sharing Dataset"
 )
