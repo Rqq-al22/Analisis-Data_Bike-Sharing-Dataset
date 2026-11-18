@@ -1,15 +1,14 @@
-import os
-import matplotlib.pyplot as plt
+import streamlit as st  # <-- Pastikan baris ini ada di paling atas!
 import pandas as pd
+import matplotlib.pyplot as plt
 import seaborn as sns
+import os
 
-# Konfigurasi halaman dashboard
+# Konfigurasi halaman (harus menjadi perintah st pertama)
 st.set_page_config(
-    page_title="Analisis Bike Sharing Dataset", layout="wide"
+    page_title="Analisis Bike Sharing Dataset",
+    layout="wide"
 )
-
-sns.set_theme(style="whitegrid")
-
 
 # Load dan persiapan data yang disempurnakan
 @st.cache_data
