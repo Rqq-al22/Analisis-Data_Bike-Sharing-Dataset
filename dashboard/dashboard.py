@@ -16,7 +16,6 @@ sns.set_theme(style="whitegrid")
 # Load and Clean Data
 @st.cache_data
 def load_data():
-  # Deteksi path file data otomatis
   if os.path.exists("dashboard/dashboard.csv"):
     path = "dashboard/dashboard.csv"
   elif os.path.exists("dashboard.csv"):
@@ -26,13 +25,11 @@ def load_data():
   else:
     path = "day.csv"
 
-  # Cek apakah file berupa day.csv mentah atau dashboard.csv matang
   if "day.csv" in path or path.endswith("day.csv"):
     day_df = pd.read_csv(path)
     day_df.drop(columns=["instant"], errors="ignore", inplace=True)
     day_df["dteday"] = pd.to_datetime(day_df["dteday"])
 
-    # Mapping standar notebook
     day_df["season"] = day_df["season"].map(
         {1: "Spring", 2: "Summer", 3: "Fall", 4: "Winter"}
     )
@@ -93,7 +90,7 @@ if "day_status" not in hour_df.columns and "workingday" in hour_df.columns:
       {0: "Akhir Pekan / Libur", 1: "Hari Kerja"}
   )
 
-# --- SIDEBAR: FILTER DATA (Dengan Key Unik) ---
+# --- SIDEBAR: FILTER DATA ---
 st.sidebar.title("Parameter Filter")
 
 available_years = (
@@ -129,17 +126,15 @@ filtered_hour = hour_df[
 ]
 
 # --- HEADER UTAMA DASHBOARD ---
-st.title("Dashboard Analisis Bike Sharing Dataset")
+st.title(" Dashboard Analisis Bike Sharing Dataset")
 st.markdown(
-    "Eksplorasi data penyewaan sepeda berdasarkan pertanyaan bisnis proyek"
-    " Dicoding."
+    "Eksplorasi data penyewaan sepeda berdasarkan performa bulanan dan"
+    " tren waktu."
 )
 st.markdown("---")
 
-# --- PERTANYAAN 1: TREN RATA-RATA PENYEWAAN BULANAN ---
-st.subheader(
-    "1. Tren Rata-rata Penyewaan Sepeda Harian per Bulan (2011 vs 2012)"
-)
+# --- BAGIAN 1: TREN BULANAN ---
+st.subheader("Tren Rata-rata Penyewaan Sepeda Harian per Bulan")
 
 month_order = [
     "Jan",
@@ -183,12 +178,18 @@ ax.legend(title="Tahun")
 ax.spines[["top", "right"]].set_visible(False)
 st.pyplot(fig)
 
+st.markdown(
+    """
+     **Kesimpulan & Insight:**
+    - Jumlah penyewaan sepeda meningkat dari musim semi dan mencapai puncaknya pada musim panas hingga awal musim gugur, lalu menurun drastis di musim dingin.
+    - Terjadi peningkatan volume penyewaan yang signifikan secara keseluruhan pada tahun 2012 dibandingkan tahun 2011.
+    """
+)
+
 st.markdown("---")
 
-# --- PERTANYAAN 2: POLA JAM & KONDISI CUACA ---
-st.subheader(
-    "2. Pengaruh Kondisi Cuaca dan Pola Jam Terhadap Penyewaan Sepeda"
-)
+# --- BAGIAN 2: POLA JAM & KONDISI CUACA ---
+st.subheader("Pengaruh Kondisi Cuaca dan Pola Jam Terhadap Penyewaan Sepeda")
 
 col1, col2 = st.columns(2)
 
@@ -213,12 +214,10 @@ with col1:
         ax=ax1,
     )
     ax1.set_title("Pola Jam Penyewaan", pad=10, fontsize=11)
-    ax1.set_xlabel("Jam", fontsize=9)
+    ax1.set_xlabel("Jam (00 - 23)", fontsize=9)
     ax1.set_ylabel("Rata-rata Penyewaan", fontsize=9)
     ax1.spines[["top", "right"]].set_visible(False)
     st.pyplot(fig1)
-  else:
-    st.warning("Kolom jam atau status hari tidak ditemukan.")
 
 with col2:
   st.markdown("##### Rata-rata Penyewaan Berdasarkan Kondisi Cuaca")
@@ -245,10 +244,8 @@ with col2:
     ax2.set_ylabel("")
     ax2.spines[["top", "right"]].set_visible(False)
     st.pyplot(fig2)
-  else:
-    st.warning("Kolom cuaca tidak ditemukan.")
 
-st.markdown("---")
-st.caption(
-    "Proyek Analisis Data - Bike Sharing Dataset | Dibuat dengan Streamlit"
-)
+st.markdown(
+    """
+     **Kesimpulan & Insight:**
+    - Kondisi cuaca **Cerah / Berawan Sebagian** mencatatkan volume penyewaan tertinggi secara
