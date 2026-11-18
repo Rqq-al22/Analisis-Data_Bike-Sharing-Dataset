@@ -1,38 +1,107 @@
 import os
-import pandas as pd
-import streamlit as st
 import matplotlib.pyplot as plt
+import pandas as pd
 import seaborn as sns
 
 # Konfigurasi halaman dashboard
 st.set_page_config(
-    page_title="Analisis Bike Sharing Dataset",
-    layout="wide"
+    page_title="Analisis Bike Sharing Dataset", layout="wide"
 )
 
-sns.set_theme(style='whitegrid')
+sns.set_theme(style="whitegrid")
 
-# Load dan persiapan data
+
+# Load dan persiapan data yang disempurnakan
 @st.cache_data
 def load_data():
-    if os.path.exists("dashboard/dashboard.csv"):
-        path = "dashboard/dashboard.csv"
-    elif os.path.exists("dashboard.csv"):
-        path = "dashboard.csv"
-    else:
-        path = "data/dashboard.csv"
-        
-    df = pd.read_csv(path)
-    
-    if 'dteday' in df.columns:
-        df['dteday'] = pd.to_datetime(df['dteday'])
-        
-    return df
+  if os.path.exists("dashboard/dashboard.csv"):
+    path = "dashboard/dashboard.csv"
+  elif os.path.exists("dashboard.csv"):
+    path = "dashboard.csv"
+  else:
+    path = "data/dashboard.csv"
+
+  df = pd.read_csv(path)
+
+  if "dteday" in df.columns:
+    df["dteday"] = pd.to_datetime(df["dteday"])
+
+  # Memastikan kolom tahun, bulan, dan nama bulan tersedia secara otomatis
+  if "dteday" in df.columns:
+    if "year" not in df.columns:
+      df["year"] = df["dteday"].dt.year
+    if "month" not in df.columns:
+      df["month"] = df["dteday"].dt.month
+    if "month_name" not in df.columns:
+      month_names_dict = {
+          1: "Jan",
+          2: "Feb",
+          3: "Mar",
+          4: "Apr",
+          5: "May",
+          6: "Jun",
+          7: "Jul",
+          8: "Aug",
+          9: "Sep",
+          10: "Oct",
+          11: "Nov",
+          12: "Dec",
+      }
+      df["month_name"] = df["month"].map(month_names_dict)
+
+  # Memastikan kolom status hari (day_status) tersedia untuk grafik jam
+  if "workingday" in df.columns and "day_status" not in df.columns:
+    df["day_status"] = df["workingday"].map(
+        {0: "Akhir Pekan / Libur", 1: "Hari Kerja"}
+    )
+
+  # Memastikan kolom cuaca (weather) tersedia
+  if "weathersit" in df.columns and "weather" not in df.columns:
+    weather_map = {
+        1: "Cerah / Berawan Sebagian",
+        2: "Berkabut / Mendung",
+        3: "Hujan Ringan / Salju Ringan",
+        4: "Hujan Lebat / Badai",
+    }
+    df["weather"] = df["weathersit"].map(weather_map)
+
+  return df
+
 
 df = load_data()
 
 day_df = df.copy()
 hour_df = df.copy()
+
+# Sidebar untuk Filter Data
+st.sidebar.title("Parameter Filter")
+available_years = (
+    sorted(day_df["year"].unique()) if "year" in day_df.columns else []
+)
+selected_year = st.sidebar.multiselect(
+    "Pilih Tahun", options=available_years, default=available_years
+)
+
+available_seasons = (
+    sorted(day_df["season"].unique()) if "season" in day_df.columns else []
+)
+selected_season = st.sidebar.multiselect(
+    "Pilih Musim", options=available_seasons, default=available_seasons
+)
+
+# Filter dataframe berdasarkan pilihan sidebar
+if "year" in day_df.columns and "season" in day_df.columns:
+  filtered_day = day_df[
+      (day_df["year"].isin(selected_year))
+      & (day_df["season"].isin(selected_season))
+  ]
+  filtered_hour = hour_df[
+      (hour_df["year"].isin(selected_year))
+      & (hour_df["season"].isin(selected_season))
+  ]
+else:
+  filtered_day = day_df
+  filtered_hour = hour_df
 
 # Sidebar untuk Filter Data
 st.sidebar.title("Parameter Filter")
