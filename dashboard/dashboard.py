@@ -7,7 +7,6 @@ import streamlit as st
 # Konfigurasi Halaman Streamlit
 st.set_page_config(
     page_title="Proyek Analisis Data: Bike Sharing",
-    page_icon="🚲",
     layout="wide",
 )
 
@@ -130,7 +129,7 @@ filtered_hour = hour_df[
 ]
 
 # --- HEADER UTAMA DASHBOARD ---
-st.title("🚲 Dashboard Analisis Bike Sharing Dataset")
+st.title("Dashboard Analisis Bike Sharing Dataset")
 st.markdown(
     "Eksplorasi data penyewaan sepeda berdasarkan pertanyaan bisnis proyek"
     " Dicoding."
