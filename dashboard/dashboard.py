@@ -66,7 +66,7 @@ def load_data():
 
 day_df, hour_df = load_data()
 
-# Pastikan kolom penunjang tersedia
+# memamastikan kolom penunjang tersedia
 if "month_name" not in day_df.columns:
   month_names_dict = {
       1: "Jan",
