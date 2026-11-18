@@ -11,11 +11,19 @@ st.set_page_config(
 
 sns.set_theme(style='whitegrid')
 
-# Load dan siapkan data
+# Load dan siapkan data dengan path yang fleksibel
 @st.cache_data
 def load_data():
-    # dashboard csv dan py ada di tempat sama
-    df = pd.read_csv("dashboard.csv")
+    # Cek apakah file berada di dalam folder dashboard/ atau di direktori utama
+    if os.path.exists("dashboard/dashboard.csv"):
+        path = "dashboard/dashboard.csv"
+    elif os.path.exists("dashboard.csv"):
+        path = "dashboard.csv"
+    else:
+        # Fallback jika file berada di dalam folder data
+        path = "data/dashboard.csv"
+        
+    df = pd.read_csv(path)
     
     if 'dteday' in df.columns:
         df['dteday'] = pd.to_datetime(df['dteday'])
