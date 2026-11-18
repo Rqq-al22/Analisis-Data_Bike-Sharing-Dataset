@@ -89,6 +89,10 @@ if "day_status" not in hour_df.columns and "workingday" in hour_df.columns:
   hour_df["day_status"] = hour_df["workingday"].map(
       {0: "Akhir Pekan / Libur", 1: "Hari Kerja"}
   )
+if "day_status" not in day_df.columns and "workingday" in day_df.columns:
+  day_df["day_status"] = day_df["workingday"].map(
+      {0: "Akhir Pekan / Libur", 1: "Hari Kerja"}
+  )
 
 # --- SIDEBAR: FILTER DATA ---
 st.sidebar.title("Parameter Filter")
@@ -115,14 +119,24 @@ selected_season = st.sidebar.multiselect(
     key="unique_season_filter",
 )
 
-# Terapkan Filter
+available_status = ["Hari Kerja", "Akhir Pekan / Libur"]
+selected_status = st.sidebar.multiselect(
+    "Pilih Status Hari",
+    options=available_status,
+    default=available_status,
+    key="unique_status_filter",
+)
+
+# Terapkan Filter ke DataFrame
 filtered_day = day_df[
     (day_df["year"].isin(selected_year))
     & (day_df["season"].isin(selected_season))
+    & (day_df["day_status"].isin(selected_status))
 ]
 filtered_hour = hour_df[
     (hour_df["year"].isin(selected_year))
     & (hour_df["season"].isin(selected_season))
+    & (hour_df["day_status"].isin(selected_status))
 ]
 
 # --- HEADER UTAMA DASHBOARD ---
@@ -131,6 +145,29 @@ st.markdown(
     "Eksplorasi data penyewaan sepeda berdasarkan performa bulanan dan"
     " tren waktu."
 )
+st.markdown("---")
+
+# --- KARTU METRIK UTAMA ---
+st.subheader("Ringkasan Performa")
+col_m1, col_m2, col_m3 = st.columns(3)
+
+total_orders = filtered_day["total_count"].sum()
+total_casual = (
+    filtered_day["casual"].sum() if "casual" in filtered_day.columns else 0
+)
+total_registered = (
+    filtered_day["registered"].sum()
+    if "registered" in filtered_day.columns
+    else 0
+)
+
+with col_m1:
+  st.metric(label="Total Penyewaan", value=f"{total_orders:,}")
+with col_m2:
+  st.metric(label="Pengguna Casual", value=f"{total_casual:,}")
+with col_m3:
+  st.metric(label="Pengguna Registered", value=f"{total_registered:,}")
+
 st.markdown("---")
 
 # --- BAGIAN 1: TREN BULANAN ---
@@ -255,5 +292,5 @@ st.markdown(
 
 st.markdown("---")
 st.caption(
-    "Submission Funddamental Analisis Data - Bike Sharing Dataset"
+    "Proyek Analisis Data - Bike Sharing Dataset | Dibuat dengan Streamlit"
 )
