@@ -89,6 +89,10 @@ if "day_status" not in hour_df.columns and "workingday" in hour_df.columns:
   hour_df["day_status"] = hour_df["workingday"].map(
       {0: "Akhir Pekan / Libur", 1: "Hari Kerja"}
   )
+if "day_status" not in day_df.columns and "workingday" in day_df.columns:
+  day_df["day_status"] = day_df["workingday"].map(
+      {0: "Akhir Pekan / Libur", 1: "Hari Kerja"}
+  )
 
 # --- SIDEBAR: FILTER DATA ---
 st.sidebar.title("Parameter Filter")
@@ -115,14 +119,25 @@ selected_season = st.sidebar.multiselect(
     key="unique_season_filter",
 )
 
-# Terapkan Filter
+# Tambahan Filter Hari Kerja / Libur
+available_status = ["Hari Kerja", "Akhir Pekan / Libur"]
+selected_status = st.sidebar.multiselect(
+    "Pilih Status Hari",
+    options=available_status,
+    default=available_status,
+    key="unique_status_filter",
+)
+
+# Terapkan Filter ke DataFrame
 filtered_day = day_df[
     (day_df["year"].isin(selected_year))
     & (day_df["season"].isin(selected_season))
+    & (day_df["day_status"].isin(selected_status))
 ]
 filtered_hour = hour_df[
     (hour_df["year"].isin(selected_year))
     & (hour_df["season"].isin(selected_season))
+    & (hour_df["day_status"].isin(selected_status))
 ]
 
 # --- HEADER UTAMA DASHBOARD ---
@@ -131,6 +146,29 @@ st.markdown(
     "Eksplorasi data penyewaan sepeda berdasarkan performa bulanan dan"
     " tren waktu."
 )
+st.markdown("---")
+
+# --- KARTU METRIK UTAMA (Seperti Contoh Gambar) ---
+st.subheader("Ringkasan Performa")
+col_m1, col_m2, col_m3 = st.columns(3)
+
+total_orders = filtered_day["total_count"].sum()
+total_casual = (
+    filtered_day["casual"].sum() if "casual" in filtered_day.columns else 0
+)
+total_registered = (
+    filtered_day["registered"].sum()
+    if "registered" in filtered_day.columns
+    else 0
+)
+
+with col_m1:
+  st.metric(label="Total Penyewaan", value=f"{total_orders:,}")
+with col_m2:
+  st.metric(label="Pengguna Casual", value=f"{total_casual:,}")
+with col_m3:
+  st.metric(label="Pengguna Registered", value=f"{total_registered:,}")
+
 st.markdown("---")
 
 # --- BAGIAN 1: TREN BULANAN ---
@@ -162,98 +200,4 @@ monthly_eda = (
 
 fig, ax = plt.subplots(figsize=(12, 5))
 sns.lineplot(
-    data=monthly_eda,
-    x="month_name",
-    y="avg_rentals",
-    hue="year",
-    palette=["#5B8FF9", "#E8684A"],
-    marker="o",
-    linewidth=2.5,
-    ax=ax,
-)
-ax.set_title("Rata-rata Penyewaan Harian Tiap Bulan", pad=14, fontsize=12)
-ax.set_xlabel("Bulan", fontsize=10)
-ax.set_ylabel("Rata-rata Penyewaan", fontsize=10)
-ax.legend(title="Tahun")
-ax.spines[["top", "right"]].set_visible(False)
-st.pyplot(fig)
-
-st.markdown(
-    """
-    **Kesimpulan & Insight:**
-    - Jumlah penyewaan sepeda meningkat dari musim semi dan mencapai puncaknya pada musim panas hingga awal musim gugur, lalu menurun drastis di musim dingin.
-    - Terjadi peningkatan volume penyewaan yang signifikan secara keseluruhan pada tahun 2012 dibandingkan tahun 2011.
-    """
-)
-
-st.markdown("---")
-
-# --- BAGIAN 2: POLA JAM & KONDISI CUACA ---
-st.subheader("Pengaruh Kondisi Cuaca dan Pola Jam Terhadap Penyewaan Sepeda")
-
-col1, col2 = st.columns(2)
-
-with col1:
-  st.markdown("##### Pola Penyewaan per Jam (Hari Kerja vs Libur)")
-  if "hour" in filtered_hour.columns and "day_status" in filtered_hour.columns:
-    hourly_eda = (
-        filtered_hour.groupby(["day_status", "hour"], observed=False)
-        .agg(avg_rentals=("total_count", "mean"))
-        .reset_index()
-    )
-
-    fig1, ax1 = plt.subplots(figsize=(7, 4.5))
-    sns.lineplot(
-        data=hourly_eda,
-        x="hour",
-        y="avg_rentals",
-        hue="day_status",
-        palette=["#F6BD16", "#5AD8A6"],
-        marker="o",
-        linewidth=2,
-        ax=ax1,
-    )
-    ax1.set_title("Pola Jam Penyewaan", pad=10, fontsize=11)
-    ax1.set_xlabel("Jam (00 - 23)", fontsize=9)
-    ax1.set_ylabel("Rata-rata Penyewaan", fontsize=9)
-    ax1.spines[["top", "right"]].set_visible(False)
-    st.pyplot(fig1)
-
-with col2:
-  st.markdown("##### Rata-rata Penyewaan Berdasarkan Kondisi Cuaca")
-  if "weather" in filtered_hour.columns:
-    weather_eda = (
-        filtered_hour.groupby("weather", observed=False)
-        .agg(avg_rentals=("total_count", "mean"))
-        .reset_index()
-        .sort_values("avg_rentals", ascending=False)
-    )
-
-    fig2, ax2 = plt.subplots(figsize=(7, 4.5))
-    sns.barplot(
-        data=weather_eda,
-        x="avg_rentals",
-        y="weather",
-        hue="weather",
-        palette="Blues_r",
-        legend=False,
-        ax=ax2,
-    )
-    ax2.set_title("Penyewaan Berdasarkan Cuaca", pad=10, fontsize=11)
-    ax2.set_xlabel("Rata-rata Penyewaan", fontsize=9)
-    ax2.set_ylabel("")
-    ax2.spines[["top", "right"]].set_visible(False)
-    st.pyplot(fig2)
-
-st.markdown(
-    """
-    **Kesimpulan & Insight:**
-    - Kondisi cuaca **Cerah / Berawan Sebagian** mencatatkan volume penyewaan tertinggi secara mutlak, sedangkan cuaca buruk menekan minat sewa secara drastis.
-    - Pada hari kerja, lonjakan penyewaan terjadi pada jam berangkat dan pulang kerja (pagi & sore), sedangkan pada hari libur pola penyewaan lebih santai dan memuncak di siang hari.
-    """
-)
-
-st.markdown("---")
-st.caption(
-    "Proyek Analisis Data - Bike Sharing Dataset | Dibuat dengan Streamlit"
-)
+    data=monthly_eda
