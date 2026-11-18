@@ -126,7 +126,7 @@ filtered_hour = hour_df[
 ]
 
 # --- HEADER UTAMA DASHBOARD ---
-st.title(" Dashboard Analisis Bike Sharing Dataset")
+st.title("Dashboard Analisis Bike Sharing Dataset")
 st.markdown(
     "Eksplorasi data penyewaan sepeda berdasarkan performa bulanan dan"
     " tren waktu."
@@ -180,7 +180,7 @@ st.pyplot(fig)
 
 st.markdown(
     """
-     **Kesimpulan & Insight:**
+    **Kesimpulan & Insight:**
     - Jumlah penyewaan sepeda meningkat dari musim semi dan mencapai puncaknya pada musim panas hingga awal musim gugur, lalu menurun drastis di musim dingin.
     - Terjadi peningkatan volume penyewaan yang signifikan secara keseluruhan pada tahun 2012 dibandingkan tahun 2011.
     """
@@ -247,5 +247,13 @@ with col2:
 
 st.markdown(
     """
-     **Kesimpulan & Insight:**
-    - Kondisi cuaca **Cerah / Berawan Sebagian** mencatatkan volume penyewaan tertinggi secara
+    **Kesimpulan & Insight:**
+    - Kondisi cuaca **Cerah / Berawan Sebagian** mencatatkan volume penyewaan tertinggi secara mutlak, sedangkan cuaca buruk menekan minat sewa secara drastis.
+    - Pada hari kerja, lonjakan penyewaan terjadi pada jam berangkat dan pulang kerja (pagi & sore), sedangkan pada hari libur pola penyewaan lebih santai dan memuncak di siang hari.
+    """
+)
+
+st.markdown("---")
+st.caption(
+    "Proyek Analisis Data - Bike Sharing Dataset | Dibuat dengan Streamlit"
+)
