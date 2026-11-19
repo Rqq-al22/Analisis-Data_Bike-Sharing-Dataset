@@ -177,10 +177,10 @@ if filtered_day.empty:
   st.stop()
 
 # --- HEADER UTAMA DASHBOARD ---
-st.title("Dashboard Analisis Bike Sharing Dataset")
+st.markdown("# Dashboard Analisis Bike Sharing Dataset")
 st.markdown(
     "Eksplorasi tren penyewaan sepeda harian berdasarkan performa bulanan"
-    " serta pengaruh kondisi cuaca dan suhu (fokus tahun 2011)."
+    " serta pengaruh kondisi cuaca dan suhu."
 )
 st.markdown("---")
 
