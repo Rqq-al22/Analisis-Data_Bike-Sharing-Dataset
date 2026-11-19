@@ -271,7 +271,7 @@ st.subheader("Pengaruh Kondisi Cuaca dan Suhu Terhadap Penyewaan (Tahun 2011)")
 st.caption(
     "Catatan: Visualisasi pada bagian ini difokuskan khusus pada data tahun"
     " 2011 sesuai cakupan Pertanyaan 2; pilihan tahun 2012 di sidebar tetap"
-    " memengaruhi Ringkasan Performa dan Tren Bulanan di atas."
+    " memengaruhi Ringkasan Performa dan Tren Bulanan di bagian atas."
 )
 
 df_2011 = filtered_day[filtered_day["year"] == 2011].copy()
