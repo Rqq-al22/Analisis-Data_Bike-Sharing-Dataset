@@ -1,5 +1,6 @@
 import os
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import seaborn as sns
 import streamlit as st
@@ -25,15 +26,33 @@ def load_data():
   else:
     path = "day.csv"
 
-  if "day.csv" in path or path.endswith("day.csv"):
-    df = pd.read_csv(path)
-    df.drop(columns=["instant"], errors="ignore", inplace=True)
+  df = pd.read_csv(path)
+  df.drop(columns=["instant"], errors="ignore", inplace=True)
+
+  if "dteday" in df.columns:
     df["dteday"] = pd.to_datetime(df["dteday"])
+    df["date"] = df["dteday"]
+  elif "date" in df.columns:
+    df["date"] = pd.to_datetime(df["date"])
+
+  if "year" not in df.columns:
+    if "yr" in df.columns:
+      df["year"] = df["yr"].map({0: 2011, 1: 2012})
+    elif "date" in df.columns:
+      df["year"] = df["date"].dt.year
+
+  if "month" not in df.columns:
+    if "mnth" in df.columns:
+      df["month"] = df["mnth"]
+    elif "date" in df.columns:
+      df["month"] = df["date"].dt.month
+
+  if "season" in df.columns and pd.api.types.is_numeric_dtype(df["season"]):
     df["season"] = df["season"].map(
         {1: "Spring", 2: "Summer", 3: "Fall", 4: "Winter"}
     )
-    df["year"] = df["yr"].map({0: 2011, 1: 2012})
-    df["month"] = df["mnth"]
+
+  if "weekday" in df.columns and pd.api.types.is_numeric_dtype(df["weekday"]):
     df["weekday"] = df["weekday"].map({
         0: "Minggu",
         1: "Senin",
@@ -43,37 +62,43 @@ def load_data():
         5: "Jumat",
         6: "Sabtu",
     })
+
+  if "cnt" in df.columns and "total_count" not in df.columns:
+    df.rename(columns={"cnt": "total_count"}, inplace=True)
+
+  if "weather" not in df.columns and "weathersit" in df.columns:
     df["weather"] = df["weathersit"].map({
         1: "Cerah / Berawan Sebagian",
         2: "Berkabut / Mendung",
         3: "Hujan Ringan / Salju Ringan",
         4: "Hujan Lebat / Badai",
     })
-    df.rename(columns={"dteday": "date", "cnt": "total_count"}, inplace=True)
-  else:
-    df = pd.read_csv(path)
-    if "dteday" in df.columns:
-      df["dteday"] = pd.to_datetime(df["dteday"])
-      df["date"] = df["dteday"]
-    if "year" not in df.columns and "date" in df.columns:
-      df["year"] = df["date"].dt.year
-    if "month" not in df.columns and "date" in df.columns:
-      df["month"] = df["date"].dt.month
-    if "cnt" in df.columns and "total_count" not in df.columns:
-      df.rename(columns={"cnt": "total_count"}, inplace=True)
-    if "weathersit" in df.columns and "weather" not in df.columns:
-      df["weather"] = df["weathersit"].map({
-          1: "Cerah / Berawan Sebagian",
-          2: "Berkabut / Mendung",
-          3: "Hujan Ringan / Salju Ringan",
-          4: "Hujan Lebat / Badai",
-      })
+
+  if "day_status" not in df.columns and "workingday" in df.columns:
+    df["day_status"] = df["workingday"].map(
+        {0: "Akhir Pekan / Libur", 1: "Hari Kerja"}
+    )
 
   # Konversi suhu ternormalisasi ke perkiraan Celsius (sesuai skala dataset Bike Sharing)
-  if "temp" in df.columns and "temp_c" not in df.columns:
+  if "temp" in df.columns:
     df["temp_c"] = df["temp"] * 41
 
-  # Pastikan kolom penunjang tersedia
+  # Jika dataset yang terbaca berupa data per jam (lebih dari 366 baris per tahun),
+  # agregasikan dulu ke tingkat harian agar selaras dengan analisis harian di notebook
+  if "date" in df.columns and len(df) > 400:
+    agg_dict = {"total_count": "sum"}
+    for col in ["casual", "registered"]:
+      if col in df.columns:
+        agg_dict[col] = "sum"
+    for col in ["temp_c", "temp", "atemp", "hum", "windspeed"]:
+      if col in df.columns:
+        agg_dict[col] = "mean"
+    for col in ["year", "month", "season", "weekday", "weather", "day_status"]:
+      if col in df.columns:
+        agg_dict[col] = "first"
+
+    df = df.groupby("date", as_index=False).agg(agg_dict)
+
   if "month_name" not in df.columns and "month" in df.columns:
     month_names_dict = {
         1: "Jan",
@@ -90,11 +115,6 @@ def load_data():
         12: "Dec",
     }
     df["month_name"] = df["month"].map(month_names_dict)
-
-  if "day_status" not in df.columns and "workingday" in df.columns:
-    df["day_status"] = df["workingday"].map(
-        {0: "Akhir Pekan / Libur", 1: "Hari Kerja"}
-    )
 
   return df
 
@@ -248,6 +268,11 @@ st.markdown("---")
 
 # --- BAGIAN 2 (PERTANYAAN 2): PENGARUH CUACA & SUHU (FOKUS TAHUN 2011) ---
 st.subheader("Pengaruh Kondisi Cuaca dan Suhu Terhadap Penyewaan (Tahun 2011)")
+st.caption(
+    "Catatan: Visualisasi pada bagian ini difokuskan khusus pada data tahun"
+    " 2011 sesuai cakupan Pertanyaan 2; pilihan tahun 2012 di sidebar tetap"
+    " memengaruhi Ringkasan Performa dan Tren Bulanan di atas."
+)
 
 df_2011 = filtered_day[filtered_day["year"] == 2011].copy()
 
@@ -257,7 +282,6 @@ if df_2011.empty:
       " sidebar untuk melihat analisis cuaca dan suhu tahun 2011."
   )
 else:
-  # Ringkasan metrik 2011
   m2011_1, m2011_2, m2011_3 = st.columns(3)
   with m2011_1:
     st.metric(
@@ -311,20 +335,23 @@ else:
   with col_c2:
     st.markdown("##### Pengaruh Suhu Terhadap Penyewaan Harian (2011)")
     if "temp_c" in df_2011.columns:
+      corr_val = df_2011["temp_c"].corr(df_2011["total_count"])
       fig3, ax3 = plt.subplots(figsize=(7, 4.5))
       sns.regplot(
           data=df_2011,
           x="temp_c",
           y="total_count",
-          scatter_kws={"alpha": 0.6, "s": 35, "color": "#2A9D8F"},
-          line_kws={"color": "#E76F51", "linewidth": 2},
+          scatter_kws={"alpha": 0.65, "s": 35, "color": "#4C78A8"},
+          line_kws={"color": "#E45756", "linewidth": 2},
           ax=ax3,
       )
       ax3.set_title(
-          "Suhu (°C) vs Penyewaan Sepeda Harian (2011)", pad=10, fontsize=11
+          f"Pengaruh Suhu terhadap Penyewaan Harian (2011) | r = {corr_val:.2f}",
+          pad=10,
+          fontsize=11,
       )
-      ax3.set_xlabel("Perkiraan Suhu (°C)", fontsize=9)
-      ax3.set_ylabel("Total Penyewaan Harian", fontsize=9)
+      ax3.set_xlabel("Suhu (°C)", fontsize=9)
+      ax3.set_ylabel("Total Penyewaan per Hari", fontsize=9)
       ax3.spines[["top", "right"]].set_visible(False)
       st.pyplot(fig3)
 
