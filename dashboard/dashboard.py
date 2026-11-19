@@ -26,16 +26,15 @@ def load_data():
     path = "day.csv"
 
   if "day.csv" in path or path.endswith("day.csv"):
-    day_df = pd.read_csv(path)
-    day_df.drop(columns=["instant"], errors="ignore", inplace=True)
-    day_df["dteday"] = pd.to_datetime(day_df["dteday"])
-
-    day_df["season"] = day_df["season"].map(
+    df = pd.read_csv(path)
+    df.drop(columns=["instant"], errors="ignore", inplace=True)
+    df["dteday"] = pd.to_datetime(df["dteday"])
+    df["season"] = df["season"].map(
         {1: "Spring", 2: "Summer", 3: "Fall", 4: "Winter"}
     )
-    day_df["year"] = day_df["yr"].map({0: 2011, 1: 2012})
-    day_df["month"] = day_df["mnth"]
-    day_df["weekday"] = day_df["weekday"].map({
+    df["year"] = df["yr"].map({0: 2011, 1: 2012})
+    df["month"] = df["mnth"]
+    df["weekday"] = df["weekday"].map({
         0: "Minggu",
         1: "Senin",
         2: "Selasa",
@@ -44,14 +43,13 @@ def load_data():
         5: "Jumat",
         6: "Sabtu",
     })
-    day_df["weather"] = day_df["weathersit"].map({
+    df["weather"] = df["weathersit"].map({
         1: "Cerah / Berawan Sebagian",
         2: "Berkabut / Mendung",
         3: "Hujan Ringan / Salju Ringan",
         4: "Hujan Lebat / Badai",
     })
-    day_df.rename(columns={"dteday": "date", "cnt": "total_count"}, inplace=True)
-    return day_df, day_df.copy()
+    df.rename(columns={"dteday": "date", "cnt": "total_count"}, inplace=True)
   else:
     df = pd.read_csv(path)
     if "dteday" in df.columns:
@@ -61,44 +59,55 @@ def load_data():
       df["year"] = df["date"].dt.year
     if "month" not in df.columns and "date" in df.columns:
       df["month"] = df["date"].dt.month
-    return df, df
+    if "cnt" in df.columns and "total_count" not in df.columns:
+      df.rename(columns={"cnt": "total_count"}, inplace=True)
+    if "weathersit" in df.columns and "weather" not in df.columns:
+      df["weather"] = df["weathersit"].map({
+          1: "Cerah / Berawan Sebagian",
+          2: "Berkabut / Mendung",
+          3: "Hujan Ringan / Salju Ringan",
+          4: "Hujan Lebat / Badai",
+      })
+
+  # Konversi suhu ternormalisasi ke perkiraan Celsius (sesuai skala dataset Bike Sharing)
+  if "temp" in df.columns and "temp_c" not in df.columns:
+    df["temp_c"] = df["temp"] * 41
+
+  # Pastikan kolom penunjang tersedia
+  if "month_name" not in df.columns and "month" in df.columns:
+    month_names_dict = {
+        1: "Jan",
+        2: "Feb",
+        3: "Mar",
+        4: "Apr",
+        5: "May",
+        6: "Jun",
+        7: "Jul",
+        8: "Aug",
+        9: "Sep",
+        10: "Oct",
+        11: "Nov",
+        12: "Dec",
+    }
+    df["month_name"] = df["month"].map(month_names_dict)
+
+  if "day_status" not in df.columns and "workingday" in df.columns:
+    df["day_status"] = df["workingday"].map(
+        {0: "Akhir Pekan / Libur", 1: "Hari Kerja"}
+    )
+
+  return df
 
 
-day_df, hour_df = load_data()
-
-# memamastikan kolom penunjang tersedia
-if "month_name" not in day_df.columns:
-  month_names_dict = {
-      1: "Jan",
-      2: "Feb",
-      3: "Mar",
-      4: "Apr",
-      5: "May",
-      6: "Jun",
-      7: "Jul",
-      8: "Aug",
-      9: "Sep",
-      10: "Oct",
-      11: "Nov",
-      12: "Dec",
-  }
-  day_df["month_name"] = day_df["month"].map(month_names_dict)
-  hour_df["month_name"] = hour_df["month"].map(month_names_dict)
-
-if "day_status" not in hour_df.columns and "workingday" in hour_df.columns:
-  hour_df["day_status"] = hour_df["workingday"].map(
-      {0: "Akhir Pekan / Libur", 1: "Hari Kerja"}
-  )
-if "day_status" not in day_df.columns and "workingday" in day_df.columns:
-  day_df["day_status"] = day_df["workingday"].map(
-      {0: "Akhir Pekan / Libur", 1: "Hari Kerja"}
-  )
+day_df = load_data()
 
 # --- SIDEBAR: FILTER DATA ---
 st.sidebar.title("Parameter Filter")
 
 available_years = (
-    sorted(day_df["year"].unique()) if "year" in day_df.columns else [2011, 2012]
+    sorted(day_df["year"].dropna().unique())
+    if "year" in day_df.columns
+    else [2011, 2012]
 )
 selected_year = st.sidebar.multiselect(
     "Pilih Tahun",
@@ -108,7 +117,7 @@ selected_year = st.sidebar.multiselect(
 )
 
 available_seasons = (
-    sorted(day_df["season"].unique())
+    sorted(day_df["season"].dropna().unique())
     if "season" in day_df.columns
     else ["Spring", "Summer", "Fall", "Winter"]
 )
@@ -119,7 +128,11 @@ selected_season = st.sidebar.multiselect(
     key="unique_season_filter",
 )
 
-available_status = ["Hari Kerja", "Akhir Pekan / Libur"]
+available_status = (
+    sorted(day_df["day_status"].dropna().unique())
+    if "day_status" in day_df.columns
+    else ["Hari Kerja", "Akhir Pekan / Libur"]
+)
 selected_status = st.sidebar.multiselect(
     "Pilih Status Hari",
     options=available_status,
@@ -128,30 +141,35 @@ selected_status = st.sidebar.multiselect(
 )
 
 # Terapkan Filter ke DataFrame
-filtered_day = day_df[
-    (day_df["year"].isin(selected_year))
-    & (day_df["season"].isin(selected_season))
-    & (day_df["day_status"].isin(selected_status))
-]
-filtered_hour = hour_df[
-    (hour_df["year"].isin(selected_year))
-    & (hour_df["season"].isin(selected_season))
-    & (hour_df["day_status"].isin(selected_status))
-]
+filtered_day = day_df.copy()
+if "year" in filtered_day.columns and selected_year:
+  filtered_day = filtered_day[filtered_day["year"].isin(selected_year)]
+if "season" in filtered_day.columns and selected_season:
+  filtered_day = filtered_day[filtered_day["season"].isin(selected_season)]
+if "day_status" in filtered_day.columns and selected_status:
+  filtered_day = filtered_day[filtered_day["day_status"].isin(selected_status)]
+
+if filtered_day.empty:
+  st.warning(
+      "Tidak ada data yang sesuai dengan kombinasi filter yang dipilih. Silakan"
+      " sesuaikan filter di sidebar."
+  )
+  st.stop()
 
 # --- HEADER UTAMA DASHBOARD ---
 st.title("Dashboard Analisis Bike Sharing Dataset")
 st.markdown(
-    "Eksplorasi data penyewaan sepeda berdasarkan performa bulanan dan"
-    " tren waktu."
+    "Eksplorasi tren penyewaan sepeda harian berdasarkan performa bulanan"
+    " serta pengaruh kondisi cuaca dan suhu (fokus tahun 2011)."
 )
 st.markdown("---")
 
 # --- KARTU METRIK UTAMA ---
 st.subheader("Ringkasan Performa")
-col_m1, col_m2, col_m3 = st.columns(3)
+col_m1, col_m2, col_m3, col_m4 = st.columns(4)
 
 total_orders = filtered_day["total_count"].sum()
+avg_daily_orders = filtered_day["total_count"].mean()
 total_casual = (
     filtered_day["casual"].sum() if "casual" in filtered_day.columns else 0
 )
@@ -164,13 +182,15 @@ total_registered = (
 with col_m1:
   st.metric(label="Total Penyewaan", value=f"{total_orders:,}")
 with col_m2:
-  st.metric(label="Pengguna Casual", value=f"{total_casual:,}")
+  st.metric(label="Rata-rata Harian", value=f"{avg_daily_orders:,.1f}")
 with col_m3:
+  st.metric(label="Pengguna Casual", value=f"{total_casual:,}")
+with col_m4:
   st.metric(label="Pengguna Registered", value=f"{total_registered:,}")
 
 st.markdown("---")
 
-# --- BAGIAN 1: TREN BULANAN ---
+# --- BAGIAN 1 (PERTANYAAN 1): TREN BULANAN & TAHUNAN ---
 st.subheader("Tren Rata-rata Penyewaan Sepeda Harian per Bulan")
 
 month_order = [
@@ -187,17 +207,18 @@ month_order = [
     "Nov",
     "Dec",
 ]
-filtered_day["month_name"] = pd.Categorical(
-    filtered_day["month_name"], categories=month_order, ordered=True
+plot_df = filtered_day.copy()
+plot_df["month_name"] = pd.Categorical(
+    plot_df["month_name"], categories=month_order, ordered=True
 )
 
 monthly_eda = (
-    filtered_day.groupby(["year", "month_name"], observed=False)
+    plot_df.groupby(["year", "month_name"], observed=False)
     .agg(avg_rentals=("total_count", "mean"))
     .reset_index()
 )
 
-fig, ax = plt.subplots(figsize=(12, 5))
+fig1, ax1 = plt.subplots(figsize=(12, 4.8))
 sns.lineplot(
     data=monthly_eda,
     x="month_name",
@@ -206,91 +227,112 @@ sns.lineplot(
     palette=["#5B8FF9", "#E8684A"],
     marker="o",
     linewidth=2.5,
-    ax=ax,
+    ax=ax1,
 )
-ax.set_title("Rata-rata Penyewaan Harian Tiap Bulan", pad=14, fontsize=12)
-ax.set_xlabel("Bulan", fontsize=10)
-ax.set_ylabel("Rata-rata Penyewaan", fontsize=10)
-ax.legend(title="Tahun")
-ax.spines[["top", "right"]].set_visible(False)
-st.pyplot(fig)
+ax1.set_title(
+    "Rata-rata Penyewaan Sepeda Harian per Bulan", pad=14, fontsize=12
+)
+ax1.set_xlabel("Bulan", fontsize=10)
+ax1.set_ylabel("Rata-rata Penyewaan Harian", fontsize=10)
+ax1.legend(title="Tahun")
+ax1.spines[["top", "right"]].set_visible(False)
+st.pyplot(fig1)
 
-st.markdown(
-    """
-    **Kesimpulan & Insight:**
-    - Jumlah penyewaan sepeda meningkat dari musim semi dan mencapai puncaknya pada musim panas hingga awal musim gugur, lalu menurun drastis di musim dingin.
-    - Terjadi peningkatan volume penyewaan yang signifikan secara keseluruhan pada tahun 2012 dibandingkan tahun 2011.
-    """
-)
+st.markdown("""
+**Insight:**
+* Penyewaan harian cenderung meningkat dari awal tahun menuju pertengahan hingga akhir pertengahan tahun (musim panas/gugur), lalu melandai pada musim dingin.
+* Apabila kedua tahun ditampilkan (2011 dan 2012), rata-rata penyewaan harian meningkat tajam dari **3.405,8** (2011) menjadi **5.599,9** (2012), atau tumbuh sekitar **+64,4%**.
+""")
 
 st.markdown("---")
 
-# --- BAGIAN 2: POLA JAM & KONDISI CUACA ---
-st.subheader("Pengaruh Kondisi Cuaca dan Pola Jam Terhadap Penyewaan Sepeda")
+# --- BAGIAN 2 (PERTANYAAN 2): PENGARUH CUACA & SUHU (FOKUS TAHUN 2011) ---
+st.subheader("Pengaruh Kondisi Cuaca dan Suhu Terhadap Penyewaan (Tahun 2011)")
 
-col1, col2 = st.columns(2)
+df_2011 = filtered_day[filtered_day["year"] == 2011].copy()
 
-with col1:
-  st.markdown("##### Pola Penyewaan per Jam (Hari Kerja vs Libur)")
-  if "hour" in filtered_hour.columns and "day_status" in filtered_hour.columns:
-    hourly_eda = (
-        filtered_hour.groupby(["day_status", "hour"], observed=False)
-        .agg(avg_rentals=("total_count", "mean"))
-        .reset_index()
+if df_2011.empty:
+  st.info(
+      "Tahun **2011** tidak terpilih pada filter saat ini. Pilih **2011** di"
+      " sidebar untuk melihat analisis cuaca dan suhu tahun 2011."
+  )
+else:
+  # Ringkasan metrik 2011
+  m2011_1, m2011_2, m2011_3 = st.columns(3)
+  with m2011_1:
+    st.metric(
+        label="Rata-rata Penyewaan Harian (2011)",
+        value=f"{df_2011['total_count'].mean():,.1f}",
     )
+  with m2011_2:
+    if "temp_c" in df_2011.columns:
+      st.metric(
+          label="Rata-rata Suhu (2011)",
+          value=f"{df_2011['temp_c'].mean():.1f} °C",
+      )
+  with m2011_3:
+    if "temp_c" in df_2011.columns:
+      corr_val = df_2011["temp_c"].corr(df_2011["total_count"])
+      st.metric(
+          label="Korelasi Suhu vs Penyewaan (2011)",
+          value=f"{corr_val:.2f}",
+      )
 
-    fig1, ax1 = plt.subplots(figsize=(7, 4.5))
-    sns.lineplot(
-        data=hourly_eda,
-        x="hour",
-        y="avg_rentals",
-        hue="day_status",
-        palette=["#F6BD16", "#5AD8A6"],
-        marker="o",
-        linewidth=2,
-        ax=ax1,
-    )
-    ax1.set_title("Pola Jam Penyewaan", pad=10, fontsize=11)
-    ax1.set_xlabel("Jam (00 - 23)", fontsize=9)
-    ax1.set_ylabel("Rata-rata Penyewaan", fontsize=9)
-    ax1.spines[["top", "right"]].set_visible(False)
-    st.pyplot(fig1)
+  col_c1, col_c2 = st.columns(2)
 
-with col2:
-  st.markdown("##### Rata-rata Penyewaan Berdasarkan Kondisi Cuaca")
-  if "weather" in filtered_hour.columns:
-    weather_eda = (
-        filtered_hour.groupby("weather", observed=False)
-        .agg(avg_rentals=("total_count", "mean"))
-        .reset_index()
-        .sort_values("avg_rentals", ascending=False)
-    )
+  with col_c1:
+    st.markdown("##### Rata-rata Penyewaan per Kondisi Cuaca (2011)")
+    if "weather" in df_2011.columns:
+      weather_2011 = (
+          df_2011.groupby("weather", observed=False)
+          .agg(avg_rentals=("total_count", "mean"))
+          .reset_index()
+          .sort_values("avg_rentals", ascending=False)
+      )
 
-    fig2, ax2 = plt.subplots(figsize=(7, 4.5))
-    sns.barplot(
-        data=weather_eda,
-        x="avg_rentals",
-        y="weather",
-        hue="weather",
-        palette="Blues_r",
-        legend=False,
-        ax=ax2,
-    )
-    ax2.set_title("Penyewaan Berdasarkan Cuaca", pad=10, fontsize=11)
-    ax2.set_xlabel("Rata-rata Penyewaan", fontsize=9)
-    ax2.set_ylabel("")
-    ax2.spines[["top", "right"]].set_visible(False)
-    st.pyplot(fig2)
+      fig2, ax2 = plt.subplots(figsize=(7, 4.5))
+      sns.barplot(
+          data=weather_2011,
+          x="avg_rentals",
+          y="weather",
+          hue="weather",
+          palette="Blues_r",
+          legend=False,
+          ax=ax2,
+      )
+      ax2.set_title(
+          "Rata-rata Penyewaan per Kondisi Cuaca (2011)", pad=10, fontsize=11
+      )
+      ax2.set_xlabel("Rata-rata Penyewaan Harian", fontsize=9)
+      ax2.set_ylabel("")
+      ax2.spines[["top", "right"]].set_visible(False)
+      st.pyplot(fig2)
 
-st.markdown(
-    """
-    **Kesimpulan & Insight:**
-    - Kondisi cuaca **Cerah / Berawan Sebagian** mencatatkan volume penyewaan tertinggi secara mutlak, sedangkan cuaca buruk menekan minat sewa secara drastis.
-    - Pada hari kerja, lonjakan penyewaan terjadi pada jam berangkat dan pulang kerja (pagi & sore), sedangkan pada hari libur pola penyewaan lebih santai dan memuncak di siang hari.
-    """
-)
+  with col_c2:
+    st.markdown("##### Pengaruh Suhu Terhadap Penyewaan Harian (2011)")
+    if "temp_c" in df_2011.columns:
+      fig3, ax3 = plt.subplots(figsize=(7, 4.5))
+      sns.regplot(
+          data=df_2011,
+          x="temp_c",
+          y="total_count",
+          scatter_kws={"alpha": 0.6, "s": 35, "color": "#2A9D8F"},
+          line_kws={"color": "#E76F51", "linewidth": 2},
+          ax=ax3,
+      )
+      ax3.set_title(
+          "Suhu (°C) vs Penyewaan Sepeda Harian (2011)", pad=10, fontsize=11
+      )
+      ax3.set_xlabel("Perkiraan Suhu (°C)", fontsize=9)
+      ax3.set_ylabel("Total Penyewaan Harian", fontsize=9)
+      ax3.spines[["top", "right"]].set_visible(False)
+      st.pyplot(fig3)
+
+  st.markdown("""
+**Insight:**
+* Pada tahun **2011**, kondisi cuaca **Cerah / Berawan Sebagian** menghasilkan rata-rata penyewaan harian tertinggi, sedangkan cuaca berkabut/mendung dan hujan ringan menurunkan volume penyewaan.
+* Suhu (`temp_c`) pada tahun **2011** menunjukkan korelasi positif dengan jumlah penyewaan harian—penyewaan cenderung meningkat seiring naiknya suhu hingga rentang hangat, sebelum melandai pada suhu ekstrem.
+""")
 
 st.markdown("---")
-st.caption(
-    "Submission Fundamentak Analisis Data - Bike Sharing Dataset"
-)
+st.caption("Submission Fundamental Analisis Data - Bike Sharing Dataset")
